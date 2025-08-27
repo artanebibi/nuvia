@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "AI Web Summarizer",
+  "version": "1.0",
+  "description": "Summarizes website content and allows smart searching.",
+  "permissions": ["scripting", "activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": ["<all_urls>"]
+}
