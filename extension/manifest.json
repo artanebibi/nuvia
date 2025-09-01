@@ -1,11 +1,35 @@
 {
   "manifest_version": 3,
-  "name": "AI Web Summarizer",
+  "name": "NUVIA",
   "version": "1.0",
-  "description": "Summarizes website content and allows smart searching.",
-  "permissions": ["scripting", "activeTab"],
-  "action": {
-    "default_popup": "popup.html"
+  "description": "AI Chat Assistant",
+
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+
+  "side_panel": {
+    "default_path": "ui.html"
   },
-  "host_permissions": ["<all_urls>"]
+
+  "action": {
+    "default_title": "Open AI Chat"
+  },
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+
+  "icons": {
+    "16": "/icons/N16.png",
+  }
+
 }

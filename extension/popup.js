@@ -32,7 +32,7 @@ async function loadChatLogs() {
 
             const botDiv = document.createElement("div");
             botDiv.className = "message bot";
-            botDiv.innerHTML = `${log.response}<div class="meta">${log.stamp} · ${log.type}</div>`;
+            botDiv.innerHTML = `${log.response}</div>`; // <div class="meta">${log.stamp} · ${log.type}
             container.appendChild(botDiv);
         });
 
@@ -54,7 +54,7 @@ document.getElementById("send-btn").addEventListener("click", async () => {
             body: prompt
         });
 
-        const text = await response.text(); // 👈 actually read the response content
+        const text = await response.text(); // read the response content
         // console.log("response: ", response);
         // console.log("text: ", text);
         // console.log("Response text:", text);
@@ -105,7 +105,6 @@ async function generateSpecialContent(type) {
 
         const tabId = tabs[0].id;
 
-        // First inject the content script manually
         chrome.scripting.executeScript({
             target: { tabId },
             files: ["contentScript.js"]
@@ -114,18 +113,16 @@ async function generateSpecialContent(type) {
                 console.error("Script injection failed:", chrome.runtime.lastError.message);
                 return;
             }
-
-            // Now safely send the message
             chrome.tabs.sendMessage(
                 tabId,
                 { type: "SUMMARIZATION" },
                 async (response) => {
                     if (!response || !response.text) {
-                        console.error("❌ No response or missing .text");
+                        console.error("No response or missing .text");
                         return;
                     }
 
-                    const payload = response.text;
+                    const payload = response.text; // coming from here somewhere i cant send the whole web page
                     console.log("✅ Page text:", payload);
 
                     const result = await fetch("http://localhost:8080/api/gemini/generate-special", {
