@@ -1,8 +1,8 @@
 package artan.extension_sb.service.impl;
 
-import artan.extension_sb.model.Log;
-import artan.extension_sb.model.Response.Response;
-import artan.extension_sb.model.TYPE;
+import artan.extension_sb.model.domain.Log;
+import artan.extension_sb.model.domain.Response.Response;
+import artan.extension_sb.model.domain.TYPE;
 import artan.extension_sb.service.GeminiService;
 import artan.extension_sb.service.LogService;
 import artan.extension_sb.service.ProcessingService;

@@ -1,4 +1,4 @@
-package artan.extension_sb.model;
+package artan.extension_sb.model.domain;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

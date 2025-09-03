@@ -1,4 +1,4 @@
-package artan.extension_sb.model;
+package artan.extension_sb.model.domain;
 
 public enum TYPE {
     DEFINE, // define the type of prompt with the tags below    --- FINISH

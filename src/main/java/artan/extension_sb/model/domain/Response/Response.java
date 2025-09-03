@@ -1,4 +1,4 @@
-package artan.extension_sb.model.Response;
+package artan.extension_sb.model.domain.Response;
 
 import java.util.List;
 

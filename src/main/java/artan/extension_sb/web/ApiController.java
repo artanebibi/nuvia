@@ -1,6 +1,6 @@
 package artan.extension_sb.web;
 
-import artan.extension_sb.model.Log;
+import artan.extension_sb.model.domain.Log;
 import artan.extension_sb.service.LogService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

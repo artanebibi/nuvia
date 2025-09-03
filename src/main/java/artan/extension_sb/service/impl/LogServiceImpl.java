@@ -1,6 +1,6 @@
 package artan.extension_sb.service.impl;
 
-import artan.extension_sb.model.Log;
+import artan.extension_sb.model.domain.Log;
 import artan.extension_sb.repository.LogRepository;
 import artan.extension_sb.service.LogService;
 import org.springframework.stereotype.Service;
