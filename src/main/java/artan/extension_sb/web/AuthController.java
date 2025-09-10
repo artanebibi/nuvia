@@ -36,4 +36,19 @@ public class AuthController {
         logger.info("POST request to Google auth");
         return new RedirectView("/oauth2/authorization/google");
     }
+
+    @GetMapping("/auth/success")
+    public ResponseEntity<String> authSuccess() {
+        return ResponseEntity.ok("""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Authentication Successful</title></head>
+        <body>
+            <h2>Authentication Successful!</h2>
+            <p>You can close this tab.</p>
+            <script>setTimeout(() => window.close(), 2000);</script>
+        </body>
+        </html>
+        """);
+    }
 }
