@@ -42,94 +42,6 @@ public class AuthHandler implements AuthenticationSuccessHandler {
         this.objectMapper = objectMapper;
     }
 
-//    @Override
-//    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-//                                        Authentication authentication) throws IOException, ServletException {
-//
-//        logger.info("SuccessHandler called");
-//
-//        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-//        String provider = "google";
-//
-//
-//        try {
-//            // Extract user information
-//            AuthUserInfo userInfo = extractUserInfo(oauth2User, provider);
-//
-//            logger.info("Login Successful");
-//            logger.info("Name: {}", userInfo.getName());
-//            logger.info("Email: {}", userInfo.getEmail());
-//
-//            // if user is already in the db
-//            User existingUser = userService.findByEmail(userInfo.getEmail());
-//            String refreshToken = "";
-//            LocalDateTime refreshTokenExpiryDate = LocalDateTime.now();
-//
-//            UUID userIdForToken;
-//
-//            if (existingUser == null) { // sign up
-//
-//                User newUser = new User();
-//                newUser.setFirstName(userInfo.getFirstName());
-//                newUser.setLastName(userInfo.getLastName());
-//                newUser.setUsername(userInfo.getNickName());
-//                newUser.setGoogleEmail(userInfo.getEmail());
-//                newUser.setRefreshToken(tokenService.generateRefreshToken());
-//                newUser.setRefreshTokenExpiryDate(LocalDateTime.now().plusMonths(6));
-//                newUser.setAvatarUrl(userInfo.getAvatarUrl());
-//                newUser.setCreatedAt(LocalDateTime.now());
-//
-//                User savedUser = userService.save(newUser);
-//                userIdForToken = savedUser.getId();
-//
-//
-//                refreshToken = newUser.getRefreshToken();
-//                refreshTokenExpiryDate = savedUser.getRefreshTokenExpiryDate();
-//
-//
-//                logger.info("user saved, ID: {}", userIdForToken);
-//
-//            } else { // sign in
-//                existingUser.setRefreshToken(tokenService.generateRefreshToken());
-//                existingUser.setRefreshTokenExpiryDate(LocalDateTime.now().plusDays(30));
-//
-//                User updatedUser = userService.save(existingUser);
-//                userIdForToken = updatedUser.getId();
-//
-//                refreshToken = existingUser.getRefreshToken();
-//                refreshTokenExpiryDate = existingUser.getRefreshTokenExpiryDate();
-//            }
-//
-//            String accessToken = jwtService.GenerateToken(userIdForToken);
-//            userInfo.setAccessToken(accessToken);
-//
-//            Map<String, Object> responseData = new HashMap<>();
-//            responseData.put("message", "Authenticated with " + provider + " successfully");
-//            responseData.put("data", userInfo);
-//            responseData.put("refresh_token", refreshToken);
-//            responseData.put("refresh_token_expiry_date", refreshTokenExpiryDate);
-//
-//            response.setContentType("application/json");
-//            response.setCharacterEncoding("UTF-8");
-//            response.setStatus(HttpServletResponse.SC_OK);
-//
-//            String jsonResponse = objectMapper.writeValueAsString(responseData);
-//
-//            response.getWriter().write(jsonResponse);
-//            response.getWriter().flush();
-//        } catch (Exception e) {
-//            logger.error("Error success handling: ", e);
-//
-//            Map<String, Object> errorResponse = new HashMap<>();
-//            errorResponse.put("success", false);
-//            errorResponse.put("error", "Authentication processing failed");
-//            errorResponse.put("message", e.getMessage());
-//
-//            response.setContentType("application/json");
-//            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-//            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
-//        }
-//    }
 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
@@ -188,8 +100,6 @@ public class AuthHandler implements AuthenticationSuccessHandler {
             String accessToken = jwtService.GenerateToken(userIdForToken);
             userInfo.setAccessToken(accessToken);
 
-            // Instead of returning JSON, redirect to success page with tokens as URL parameters
-            // This is what the Chrome extension is expecting
             String redirectUrl = String.format(
                     "http://localhost:8080/auth/success?access_token=%s&refresh_token=%s&email=%s&name=%s",
                     URLEncoder.encode(accessToken, StandardCharsets.UTF_8),

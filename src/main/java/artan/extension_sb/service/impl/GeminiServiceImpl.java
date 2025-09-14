@@ -79,6 +79,52 @@ public class GeminiServiceImpl implements GeminiService {
         return log.getResponse();
     }
 
+        @Override
+    public Log generateLogFromContent(String prompt) throws JsonProcessingException {
+        String requestBody = processingService.formatPrompt(type, prompt);
+        String result = sendToApi(requestBody);
+        Response response = processingService.handleResponse(result);
+        String typeStr = response.getCandidates().get(0)
+                .getContent().getParts().get(0)
+                .getText();
+        typeStr = typeStr.replace("\n", "");
+        type = TYPE.valueOf(typeStr);
+
+        System.out.println("+++ Defined type: " + typeStr);
+
+        // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
+        if(type == TYPE.SUMMARIZATION || type == TYPE.PHOTO || type == TYPE.VIDEO) {
+            System.out.println("/// Middle-Returning: " + typeStr);
+            type = TYPE.DEFINE;
+            loggedPrompt = prompt;
+            return null;
+        }
+
+        requestBody = processingService.formatPrompt(type, prompt);
+        result = sendToApi(requestBody);
+        response = processingService.handleResponse(result);
+
+        if(type == TYPE.WEATHER){
+            String location = response.getCandidates().get(0)
+                    .getContent().getParts().get(0).getText();
+
+            String weatherData = fetchWeather(location);
+            System.out.println("WEATHER:\n" + weatherData);
+
+            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData);
+            result = sendToApi(requestBody);
+            response = processingService.handleResponse(result);
+        }
+
+        Log log = new Log(prompt, response.getCandidates().get(0)
+                .getContent().getParts().get(0).getText(),
+                LocalDateTime.now(), type);
+        logService.save(log);
+
+        type = TYPE.DEFINE;
+        return log;
+    }
+
     @Override
     public String generateSpecialContent(String prompt) throws JsonProcessingException {
         String requestBody = processingService.formatPrompt(TYPE.SUMMARIZATION, prompt);
@@ -90,6 +136,20 @@ public class GeminiServiceImpl implements GeminiService {
         logService.save(log);
         return log.getResponse();
     }
+
+    @Override
+    public Log generateLogFromSpecialContent(String prompt) throws JsonProcessingException {
+        String requestBody = processingService.formatPrompt(TYPE.SUMMARIZATION, prompt);
+        String result = sendToApi(requestBody);
+        Response response = processingService.handleResponse(result);
+        Log log = new Log(loggedPrompt, response.getCandidates().get(0)
+                .getContent().getParts().get(0).getText(),
+                LocalDateTime.now(), TYPE.SUMMARIZATION);
+        logService.save(log);
+        return log;
+    }
+
+
 
     private String fetchWeather(String location) {
         String API_URL = "https://api.weatherapi.com/v1/current.json?key=" + WEATHER_API_KEY + "&q=" + location;

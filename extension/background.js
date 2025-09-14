@@ -1,23 +1,21 @@
 const API_BASE = 'http://localhost:8080';
 
 chrome.action.onClicked.addListener((tab) => {
-    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.sidePanel.open({windowId: tab.windowId});
 });
 
 chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
+    .setPanelBehavior({openPanelOnActionClick: true})
     .catch((error) => console.error(error));
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('NUVIA Extension installed');
     checkAuthStatus();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-    console.log('NUVIA Extension started');
     let auth = checkAuthStatus();
-    if(auth === false) {
-        showAuthStatus('Authentication required');
+    if (auth === false) {
+        showAuthStatus('Authentication required', '');
         showLoginPrompt()
     }
 
@@ -27,12 +25,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     switch (request.action || request.type) {
         case 'login':
             initiateGoogleAuth();
-            sendResponse({ success: true });
+            sendResponse({success: true});
             break;
 
         case 'logout':
             handleLogout();
-            sendResponse({ success: true });
+            sendResponse({success: true});
             break;
 
         case 'getAuthStatus':
@@ -42,12 +40,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'makeApiCall':
             makeAuthenticatedRequest(request.url, request.options)
                 .then(response => response.json())
-                .then(data => sendResponse({ success: true, data }))
-                .catch(error => sendResponse({ success: false, error: error.message }));
+                .then(data => sendResponse({success: true, data}))
+                .catch(error => sendResponse({success: false, error: error.message}));
             return true;
 
         case "SUMMARIZATION":
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                 if (tabs[0]) {
                     chrome.tabs.sendMessage(tabs[0].id, request, (response) => {
                         sendResponse(response);
@@ -69,27 +67,27 @@ async function checkAuthStatus() {
 
     if (!tokens.accessToken || !tokens.refreshToken) {
         console.log('no tokens found');
-        return { authenticated: false };
+        return {authenticated: false};
     }
 
     if (isTokenExpired(tokens.accessToken)) {
         if (isTokenExpired(tokens.refreshToken)) {
             await chrome.storage.local.clear();
-            return { authenticated: false };
+            return {authenticated: false};
         } else {
             return await refreshAccessToken();
         }
     }
 
     console.log('user authenticated');
-    return { authenticated: true };
+    return {authenticated: true};
 }
 
 async function getAuthStatus() {
     const tokens = await chrome.storage.local.get(['accessToken', 'refreshToken', 'userEmail', 'userName']);
 
     if (!tokens.accessToken) {
-        return { authenticated: false };
+        return {authenticated: false};
     }
 
     if (isTokenExpired(tokens.accessToken)) {
@@ -104,7 +102,7 @@ async function getAuthStatus() {
                 }
             };
         } else {
-            return { authenticated: false };
+            return {authenticated: false};
         }
     }
 
@@ -133,13 +131,10 @@ function isTokenExpired(token) {
 function initiateGoogleAuth() {
     const authUrl = `${API_BASE}/oauth2/authorization/google`;
 
-    chrome.tabs.create({ url: authUrl }, (tab) => {
+    chrome.tabs.create({url: authUrl}, (tab) => {
         const listener = (tabId, changeInfo) => {
             if (tabId === tab.id && changeInfo.url) {
-                console.log('Tab URL changed to:', changeInfo.url);
-
                 if (changeInfo.url.includes('/auth/success')) {
-                    console.log('✅ Found success URL, handling callback...');
                     handleOAuthCallback(changeInfo.url, tab.id);
                     chrome.tabs.onUpdated.removeListener(listener);
                 }
@@ -149,8 +144,11 @@ function initiateGoogleAuth() {
         chrome.tabs.onUpdated.addListener(listener);
     });
 }
+
 async function handleOAuthCallback(url, tabId) {
     try {
+        await handleLogout();
+
         const urlObj = new URL(url);
         const accessToken = urlObj.searchParams.get('access_token');
         const refreshToken = urlObj.searchParams.get('refresh_token');
@@ -166,21 +164,17 @@ async function handleOAuthCallback(url, tabId) {
                 loginTime: Date.now()
             });
 
-            console.log('tokens stored for:', email);
-
             chrome.tabs.remove(tabId);
 
             chrome.runtime.sendMessage({
                 action: 'loginSuccess',
-                user: { email, name }
-            })
+                user: {email, name}
+            });
 
         } else {
-            console.error('Failed to extract tokens from callback URL');
             chrome.tabs.remove(tabId);
         }
     } catch (error) {
-        console.error('Error handling OAuth callback:', error);
         chrome.tabs.remove(tabId);
     }
 }
@@ -191,7 +185,7 @@ async function refreshAccessToken() {
 
         if (!tokens.refreshToken || !tokens.userEmail) {
             await chrome.storage.local.clear();
-            return { authenticated: false };
+            return {authenticated: false};
         }
 
         const response = await fetch(`${API_BASE}/api/auth/refresh`, {
@@ -216,16 +210,16 @@ async function refreshAccessToken() {
             });
 
             console.log('Access token refreshed');
-            return { authenticated: true };
+            return {authenticated: true};
         } else {
             console.error('Failed to refresh token');
             await chrome.storage.local.clear();
-            return { authenticated: false };
+            return {authenticated: false};
         }
     } catch (error) {
         console.error('Token refresh error:', error);
         await chrome.storage.local.clear();
-        return { authenticated: false };
+        return {authenticated: false};
     }
 }
 
@@ -274,6 +268,31 @@ async function makeAuthenticatedRequest(url, options = {}) {
 }
 
 async function handleLogout() {
-    await chrome.storage.local.clear();
-    console.log('User logged out');
+    try {
+        const {accessToken} = await chrome.storage.local.get(['accessToken']);
+        if (accessToken) {
+            const response = await fetch(`${API_BASE}/api/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Backend logout successful:', result);
+            } else {
+                console.warn('Backend logout failed with status:', response.status);
+            }
+        }
+
+        await chrome.storage.local.clear();
+        chrome.runtime.sendMessage({
+            action: 'logoutSuccess'
+        });
+
+    } catch (error) {
+        await chrome.storage.local.clear();
+    }
 }

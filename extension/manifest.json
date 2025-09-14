@@ -30,6 +30,17 @@
 
   "icons": {
     "16": "/icons/N16.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["auth.js", "*.js", "*.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 
 }

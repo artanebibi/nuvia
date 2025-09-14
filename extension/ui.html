@@ -259,17 +259,6 @@
             opacity: 0.8;
         }
 
-        .status-indicator {
-            position: absolute;
-            top: 16px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
         .status-dot {
             width: 8px;
             height: 8px;
@@ -567,9 +556,202 @@
             display: none;
         }
 
+
+        .chat-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 350px;
+            height: 100vh;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 9999;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .chat-sidebar.show {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h3 {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        #close-sidebar {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        #close-sidebar:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        .chat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chat-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(4px);
+        }
+
+        .chat-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .chat-preview {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            line-height: 1.3;
+            margin-bottom: 8px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .chat-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .chat-count {
+            background: rgba(59, 130, 246, 0.3);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .loading {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 20px;
+        }
+
+        .header-controls {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 3;
+        }
+
+        .header-chat-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-chat-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .header-chat-btn .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        .sidebar-toggle {
+            /* Remove this class completely */
+        }
+
+        .status-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            background: #1e1e1e;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: greenyellow; /* Yellow for loading */
+        }
+
+        /* Text */
+        .status-text {
+            line-height: 1;
+        }
+
+
     </style>
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=ink_pen"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=ink_pen"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=chat" />
+    <script src="auth.js"></script>
+
 </head>
 <body>
 <div class="background">
@@ -590,11 +772,13 @@
                 <div class="header-subtitle">Your better Agent</div>
             </div>
         </div>
-        <div class="status-indicator">
-            <div class="status-dot"></div>
-            <span>Loading...</span>
+        <div class="header-controls">
+            <button id="sidebar-toggle" class="header-chat-btn">
+                <span class="material-symbols-outlined">chat</span>
+            </button>
         </div>
     </div>
+
 
     <div class="chat-container" id="chatContainer">
         <!-- Messages will be added here -->
@@ -610,15 +794,33 @@
                     <button id="search-btn">Search Page</button>
                 </div>
                 <button id="tools-toggle">
-                    <span class="material-symbols-outlined">
-                        ink_pen
-                    </span>
+                    <span class="material-symbols-outlined">chat</span>
                 </button>
-
             </div>
         </div>
     </div>
 </div>
+
+<div id="chat-sidebar" class="chat-sidebar hidden">
+    <div class="sidebar-header">
+        <h3>Chat History</h3>
+        <button id="close-sidebar">x</button>
+    </div>
+    <div class="sidebar-content" id="sidebar-content">
+        <div class="loading">Loading chats...</div>
+    </div>
+
+    <div class="status-indicator">
+        <img class="status-avatar" src="https://via.placeholder.com/32" alt="Profile">
+        <div class="status-info">
+            <div class="status-dot"></div>
+            <span class="status-text">Loading...</span>
+        </div>
+    </div>
+
+
+</div>
+
 
 <script src="actions.js"></script>
 </body>

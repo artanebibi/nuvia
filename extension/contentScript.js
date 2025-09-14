@@ -223,15 +223,6 @@ function showSearchInterface() {
     });
 }
 
-function openSidePanel() {
-    // Try to open the side panel
-    chrome.runtime.sendMessage({
-        type: 'openSidePanel'
-    }).catch(() => {
-        showNotification('Could not open side panel. Try clicking the extension icon.', 'info');
-    });
-}
-
 
 // Enhanced message listener with original functionality
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -293,7 +284,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Required for async `sendResponse`
 });
 
-// Clean up when page unloads
 window.addEventListener('beforeunload', () => {
     // Remove any NUVIA elements
     const nuviaElements = document.querySelectorAll('[id^="nuvia-"]');
