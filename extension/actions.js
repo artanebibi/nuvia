@@ -7,6 +7,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupOriginalChatInterface();
 });
 
+/***/
+function normalizeYouTubeUrl(raw) {
+    try {
+        const u = new URL(raw);
+        // youtu.be → watch
+        if (u.hostname.includes("youtu.be")) {
+            return `https://www.youtube.com/watch?v=${u.pathname.slice(1)}${u.search}`;
+        }
+        // Shorts → watch
+        if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+            const id = u.pathname.split("/")[2];
+            const t = u.searchParams.get("t");
+            return `https://www.youtube.com/watch?v=${id}${t ? `&t=${t}` : ""}`;
+        }
+        // Embed → watch
+        if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/embed/")) {
+            const id = u.pathname.split("/")[2];
+            const t = u.searchParams.get("start") || u.searchParams.get("t");
+            return `https://www.youtube.com/watch?v=${id}${t ? `&t=${t}` : ""}`;
+        }
+        return raw;
+    } catch {
+        return raw;
+    }
+}
+
+async function getCanonicalFromTab(tabId) {
+    const [{ result } = {}] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => document.querySelector('link[rel="canonical"]')?.href || location.href
+    });
+    return result || "";
+}
+
+async function resolveYouTubeUrlFromExtensionUI() {
+    // Called from popup/sidepanel/background (not from the page)
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    let url = tab?.url || "";
+    if (!url) return "";
+
+    // Prefer canonical from the page DOM when possible
+    try {
+        const canonical = await getCanonicalFromTab(tab.id);
+        if (canonical) url = canonical;
+    } catch {
+        /* ignore, fall back to tab.url */
+    }
+    return normalizeYouTubeUrl(url);
+}
+
+/***/
+
 let isAuthenticated = false;
 let currentUser = null;
 
@@ -289,7 +341,7 @@ function setupOriginalChatInterface() {
 
             const text = await response.text();
 
-            if (text === 'SUMMARIZATION') {
+            if (text === 'SUMMARIZATION' || text === 'VIDEO') {
                 await generateSpecialContent(text);
             }
 
@@ -322,57 +374,99 @@ async function getAuthHeader() {
 async function generateSpecialContent(type) {
     console.log("GENERATE SPECIAL CONTENT WITH TYPE ", type);
 
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        if (!tabs.length) return console.error("No active tab.");
+    if(type === 'SUMMARIZATION') {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (!tabs.length) return console.error("No active tab.");
 
-        const tabId = tabs[0].id;
+            const tabId = tabs[0].id;
 
-        chrome.scripting.executeScript({
-            target: {tabId},
-            files: ["contentScript.js"]
-        }, () => {
-            if (chrome.runtime.lastError) {
-                console.error("Script injection failed:", chrome.runtime.lastError.message);
-                return;
-            }
-            chrome.tabs.sendMessage(
-                tabId,
-                {type: "SUMMARIZATION"},
-                async (response) => {
-                    if (!response || !response.text) {
-                        console.error("No response or missing .text");
-                        return;
-                    }
-
-                    const payload = response.text;
-
-                    try {
-                        const authHeader = await getAuthHeader();
-
-                        const endpoint = currentChatId
-                            ? `http://localhost:8080/api/gemini/generate-special/${currentChatId}`
-                            : "http://localhost:8080/api/gemini/generate-special";
-
-                        const result = await fetch(endpoint, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "text/plain",
-                                ...(authHeader ? {"Authorization": authHeader} : {})
-                            },
-                            body: payload
-                        });
-
-                        const responseText = await result.text();
-                        console.log("Gemini response:", responseText);
-                        loadSpecificChat(CURRENT_CHAT_ID)
-                    } catch (error) {
-                        console.error("Error in generateSpecialContent:", error);
-                    }
-                    loadSpecificChat(CURRENT_CHAT_ID)
+            chrome.scripting.executeScript({
+                target: {tabId},
+                files: ["contentScript.js"]
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error("Script injection failed:", chrome.runtime.lastError.message);
+                    return;
                 }
-            );
+                chrome.tabs.sendMessage(
+                    tabId,
+                    {type: "SUMMARIZATION"},
+                    async (response) => {
+                        if (!response || !response.text) {
+                            console.error("No response or missing .text");
+                            return;
+                        }
+
+                        const payload = type + "###" + response.text;
+
+                        try {
+                            const authHeader = await getAuthHeader();
+
+                            const endpoint = currentChatId
+                                ? `http://localhost:8080/api/gemini/generate-special/${currentChatId}`
+                                : "http://localhost:8080/api/gemini/generate-special";
+
+                            const result = await fetch(endpoint, {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "text/plain",
+                                    ...(authHeader ? {"Authorization": authHeader} : {})
+                                },
+                                body: payload
+                            });
+
+                            const responseText = await result.text();
+                            console.log("Gemini response:", responseText);
+                            loadSpecificChat(CURRENT_CHAT_ID)
+                        } catch (error) {
+                            console.error("Error in generateSpecialContent:", error);
+                        }
+                        loadSpecificChat(CURRENT_CHAT_ID)
+                    }
+                );
+            });
         });
-    });
+    }
+    else if (type === 'VIDEO') {
+        // If this code runs in popup/sidepanel/background:
+        const videoUrl = await resolveYouTubeUrlFromExtensionUI();
+
+        // If it runs as a content script on youtube.com, use:
+        // const videoUrl = normalizeYouTubeUrl(
+        //   document.querySelector('link[rel="canonical"]')?.href || location.href
+        // );
+
+        if (!/^https?:\/\/(www\.)?youtube\.com|https?:\/\/youtu\.be/.test(videoUrl)) {
+            console.warn("Not a YouTube URL. Open a video tab first.");
+            return;
+        }
+
+        const payload = `${type}###${videoUrl}`;
+
+        try {
+            const authHeader = await getAuthHeader();
+            const endpoint = currentChatId
+                ? `http://localhost:8080/api/gemini/generate-special/${currentChatId}`
+                : "http://localhost:8080/api/gemini/generate-special";
+
+            const result = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain",
+                    ...(authHeader ? { "Authorization": authHeader } : {})
+                },
+                body: payload
+            });
+
+            const responseText = await result.text();
+            console.log("Gemini response:", responseText);
+        } catch (error) {
+            console.error("Error in generateSpecialContent:", error);
+        } finally {
+            loadSpecificChat(CURRENT_CHAT_ID); // call once
+        }
+    }
+
 }
 
 async function extractPageData() {

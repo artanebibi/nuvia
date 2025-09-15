@@ -8,7 +8,8 @@
     "sidePanel",
     "storage",
     "scripting",
-    "tabs"
+    "tabs",
+    "activeTab"
   ],
 
   "side_panel": {
@@ -25,7 +26,10 @@
 
   "host_permissions": [
     "https://*/*",
-    "http://*/*"
+    "http://*/*",
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://youtu.be/*"
   ],
 
   "icons": {
