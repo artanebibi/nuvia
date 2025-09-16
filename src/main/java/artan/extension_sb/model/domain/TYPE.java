@@ -10,5 +10,6 @@ public enum TYPE {
     TIME_DATE, // current time                                  --- FINISH
     WEATHER, // weather                                         --- FINISH
     WEATHER_RESULT, // fetch weather result (tied to WEATHER)   --- FINISH
-    SEARCH // search functionality on a website
+    SEARCH, // search functionality on a website
+    DOCUMENT_SUMMARIZATION
 }

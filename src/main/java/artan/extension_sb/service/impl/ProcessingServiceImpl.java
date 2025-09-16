@@ -1,8 +1,10 @@
 package artan.extension_sb.service.impl;
 
+import artan.extension_sb.model.domain.Chat;
 import artan.extension_sb.model.domain.Log;
 import artan.extension_sb.model.domain.Response.Response;
 import artan.extension_sb.model.domain.TYPE;
+import artan.extension_sb.service.ChatService;
 import artan.extension_sb.service.LogService;
 import artan.extension_sb.service.ProcessingService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,17 +14,19 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ProcessingServiceImpl implements ProcessingService {
     private final LogService logService;
-
-    public ProcessingServiceImpl(LogService logService) {
+    private final ChatService chatService;
+    public ProcessingServiceImpl(LogService logService, ChatService chatService) {
         this.logService = logService;
+        this.chatService = chatService;
     }
 
     @Override
-    public String formatPrompt(TYPE type, String prompt){
+    public String formatPrompt(TYPE type, String prompt, Chat chat){
         String request = "";
         String url = "";
         if(type == TYPE.DEFINE){
@@ -32,7 +36,7 @@ public class ProcessingServiceImpl implements ProcessingService {
             request = externalProtocol(prompt);
         }
         else if(type == TYPE.INTERNAL){
-            request = internalProtocol(prompt);
+            request = internalProtocol(prompt, chat);
         }
         else if(type == TYPE.SUMMARIZATION){
             request = summarizationProtocol(prompt);
@@ -124,9 +128,9 @@ public class ProcessingServiceImpl implements ProcessingService {
         return "'" + prompt + "'. " + context;
     }
 
-    private String internalProtocol(String prompt) {
+    private String internalProtocol(String prompt, Chat chat) {
         String history = "";
-        List<Log> logs = logService.listAll();
+        List<Log> logs = chat != null? chat.getLogs() : logService.listAll();
         for(Log log : logs){
             history += "My question: " + log.getRequest() + "\n";
             history += "Your response: " + log.getResponse();

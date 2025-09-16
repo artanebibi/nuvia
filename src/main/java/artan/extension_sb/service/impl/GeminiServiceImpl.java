@@ -1,5 +1,6 @@
 package artan.extension_sb.service.impl;
 
+import artan.extension_sb.model.domain.Chat;
 import artan.extension_sb.model.domain.Log;
 import artan.extension_sb.model.domain.Response.Response;
 import artan.extension_sb.model.domain.TYPE;
@@ -32,8 +33,8 @@ public class GeminiServiceImpl implements GeminiService {
     }
 
     @Override
-    public String generateContent(String prompt) throws JsonProcessingException {
-        String requestBody = processingService.formatPrompt(type, prompt);
+    public String generateContent(String prompt, Chat chat) throws JsonProcessingException {
+        String requestBody = processingService.formatPrompt(type, prompt, chat);
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
         String typeStr = response.getCandidates().get(0)
@@ -45,18 +46,18 @@ public class GeminiServiceImpl implements GeminiService {
         System.out.println("+++ Defined type: " + typeStr);
 
         // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
-        if(type == TYPE.SUMMARIZATION || type == TYPE.PHOTO || type == TYPE.VIDEO) {
+        if (type == TYPE.SUMMARIZATION) {
             System.out.println("/// Middle-Returning: " + typeStr);
             type = TYPE.DEFINE;
             loggedPrompt = prompt;
             return typeStr;
         }
 
-        requestBody = processingService.formatPrompt(type, prompt);
+        requestBody = processingService.formatPrompt(type, prompt, chat);
         result = sendToApi(requestBody);
         response = processingService.handleResponse(result);
 
-        if(type == TYPE.WEATHER){
+        if (type == TYPE.WEATHER) {
             String location = response.getCandidates().get(0)
                     .getContent().getParts().get(0).getText();
 
@@ -64,7 +65,7 @@ public class GeminiServiceImpl implements GeminiService {
             System.out.println("WEATHER:\n" + weatherData);
 //            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, location);
 
-            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData);
+            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData, null);
             result = sendToApi(requestBody);
             response = processingService.handleResponse(result);
         }
@@ -79,9 +80,9 @@ public class GeminiServiceImpl implements GeminiService {
         return log.getResponse();
     }
 
-        @Override
-    public Log generateLogFromContent(String prompt) throws JsonProcessingException {
-        String requestBody = processingService.formatPrompt(type, prompt);
+    @Override
+    public Log generateLogFromContent(String prompt, Chat chat) throws JsonProcessingException {
+        String requestBody = processingService.formatPrompt(type, prompt, chat);
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
         String typeStr = response.getCandidates().get(0)
@@ -93,25 +94,25 @@ public class GeminiServiceImpl implements GeminiService {
         System.out.println("+++ Defined type: " + typeStr);
 
         // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
-        if(type == TYPE.SUMMARIZATION || type == TYPE.PHOTO || type == TYPE.VIDEO) {
+        if (type == TYPE.SUMMARIZATION) {
             System.out.println("/// Middle-Returning: " + typeStr);
             type = TYPE.DEFINE;
             loggedPrompt = prompt;
             return null;
         }
 
-        requestBody = processingService.formatPrompt(type, prompt);
+        requestBody = processingService.formatPrompt(type, prompt, chat);
         result = sendToApi(requestBody);
         response = processingService.handleResponse(result);
 
-        if(type == TYPE.WEATHER){
+        if (type == TYPE.WEATHER) {
             String location = response.getCandidates().get(0)
                     .getContent().getParts().get(0).getText();
 
             String weatherData = fetchWeather(location);
             System.out.println("WEATHER:\n" + weatherData);
 
-            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData);
+            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData, chat);
             result = sendToApi(requestBody);
             response = processingService.handleResponse(result);
         }
@@ -132,11 +133,10 @@ public class GeminiServiceImpl implements GeminiService {
         String tmpPrompt = parts[1];
         TYPE tmpTypeObj = TYPE.valueOf(tmpType);
         String requestBody = "";
-        if("VIDEO".equals(tmpType)){
-            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt);
-        }
-        else if("SUMMARIZATION".equals(tmpType)) {
-            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt);
+        if ("VIDEO".equals(tmpType)) {
+            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
+        } else if ("SUMMARIZATION".equals(tmpType)) {
+            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
         }
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
@@ -154,11 +154,10 @@ public class GeminiServiceImpl implements GeminiService {
         String tmpPrompt = parts[1];
         TYPE tmpTypeObj = TYPE.valueOf(tmpType);
         String requestBody = "";
-        if("VIDEO".equals(tmpType)){
-            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt);
-        }
-        else if("SUMMARIZATION".equals(tmpType)) {
-            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt);
+        if ("VIDEO".equals(tmpType)) {
+            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
+        } else if ("SUMMARIZATION".equals(tmpType)) {
+            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
         }
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
@@ -168,7 +167,6 @@ public class GeminiServiceImpl implements GeminiService {
         logService.save(log);
         return log;
     }
-
 
 
     private String fetchWeather(String location) {

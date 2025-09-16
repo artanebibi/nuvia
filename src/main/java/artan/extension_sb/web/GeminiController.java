@@ -39,7 +39,7 @@ public class GeminiController {
             String userInfo = authentication != null ? authentication.getName() : "anonymous";
             System.out.println("Gemini request from: " + userInfo);
 
-            String response = geminiService.generateContent(prompt);
+            String response = geminiService.generateContent(prompt, null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500)
@@ -62,9 +62,9 @@ public class GeminiController {
 
                 System.out.println("Gemini request from: " + userId);
 
-                String response = geminiService.generateContent(prompt);
                 Chat chat = chatService.GetChat(userId, id);
-                Log log = geminiService.generateLogFromContent(prompt);
+                String response = geminiService.generateContent(prompt, chat);
+                Log log = geminiService.generateLogFromContent(prompt, chat);
 
                 List<Log> logs = chat.getLogs();
                 if (logs == null) {
@@ -136,6 +136,4 @@ public class GeminiController {
         }
         return null;
     }
-
-
 }
