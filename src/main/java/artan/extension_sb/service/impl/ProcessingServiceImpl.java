@@ -170,8 +170,18 @@ public class ProcessingServiceImpl implements ProcessingService {
     }
 
     private String summarizationProtocol(String prompt) {
-        String str = "Can you please summarize a website whose content contains: ";
-        return str + prompt;
+        String[] parts = prompt.split("###");
+        String originalPrompt = parts[0];
+        String content = parts[1];
+
+        String str = "'" + originalPrompt + "'.";
+        str += "Can you please answer the question in the beginning in single-quotes," +
+                "being given the content of the website. Do not mention that you were" +
+                "given the content of the website, nor do not include our prompt" +
+                "in the answer you will provide. Just answer it naturally, as if you know it." +
+                "Here it is the webpage content: " + content;
+
+        return str;
     }
 
     private String defineProtocol(String prompt) {

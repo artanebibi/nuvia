@@ -142,7 +142,7 @@ public class GeminiServiceImpl implements GeminiService {
         if ("VIDEO".equals(tmpType) || "DOCUMENT".equals(tmpType)) {
             requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
         } else if ("SUMMARIZATION".equals(tmpType)) {
-            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
+            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
         }
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
