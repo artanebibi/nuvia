@@ -5,9 +5,9 @@ import artan.extension_sb.model.domain.Log;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 public interface GeminiService {
-    String generateContent(String prompt, Chat chat) throws JsonProcessingException;
-    Log generateLogFromContent(String prompt, Chat chat) throws JsonProcessingException;
-    String generateSpecialContent(String prompt) throws JsonProcessingException;
-    Log generateLogFromSpecialContent(String prompt) throws JsonProcessingException;
+    Log generateContent(String prompt, Chat chat) throws JsonProcessingException;
+//    Log generateLogFromContent(String prompt, Chat chat) throws JsonProcessingException;
+    Log generateSpecialContent(String prompt) throws JsonProcessingException;
+//    Log generateLogFromSpecialContent(String prompt) throws JsonProcessingException;
 
 }

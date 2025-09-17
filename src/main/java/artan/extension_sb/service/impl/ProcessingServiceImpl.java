@@ -5,6 +5,7 @@ import artan.extension_sb.model.domain.Log;
 import artan.extension_sb.model.domain.Response.Response;
 import artan.extension_sb.model.domain.TYPE;
 import artan.extension_sb.service.ChatService;
+import artan.extension_sb.service.DocumentService;
 import artan.extension_sb.service.LogService;
 import artan.extension_sb.service.ProcessingService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,9 +21,11 @@ import java.util.UUID;
 public class ProcessingServiceImpl implements ProcessingService {
     private final LogService logService;
     private final ChatService chatService;
-    public ProcessingServiceImpl(LogService logService, ChatService chatService) {
+    private final DocumentService documentService;
+    public ProcessingServiceImpl(LogService logService, ChatService chatService, DocumentService documentService) {
         this.logService = logService;
         this.chatService = chatService;
+        this.documentService = documentService;
     }
 
     @Override
@@ -55,10 +58,17 @@ public class ProcessingServiceImpl implements ProcessingService {
             url = parts[1];
             request = videoProtocol(parts[0]);
         }
-
-        System.out.println("----------------------------");
-        System.out.println("Request: \n" + request);
-        System.out.println("----------------------------");
+        else if(type == TYPE.DOCUMENT){
+            try {
+                request = documentProtocol(prompt);
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+        System.out.println("--- ProcessingService: Main Method");
+        System.out.println("Defined request: " + request);
+        System.out.println("Type: " + type);
 //        prompt = "Summarize the following webpage for a general audience:\n\n" + prompt;
 //        String command = defineComand(prompt);
 
@@ -95,6 +105,16 @@ public class ProcessingServiceImpl implements ProcessingService {
           ]
         }
         """, request.replace("\"", "\\\""));
+    }
+
+    private String documentProtocol(String prompt) throws Exception {
+        String[] parts = prompt.split("###");
+        String url = parts[1];
+        String promptTmp = parts[0];
+        String str = "'" + promptTmp + "'. You are given a prompt in the beginning in single-quotes. Give the following document content: ";
+        str += documentService.extractTextFromUrl(url);
+        str += " Do not mention that you were given the document url - just answer naturally, as if you know it. Do not include the prompt in your response.";
+        return str;
     }
 
     private String videoProtocol(String prompt) {
@@ -163,6 +183,7 @@ public class ProcessingServiceImpl implements ProcessingService {
         str += "TIME_DATE: The user asks for current time or date.\n";
         str += "WEATHER: The user asks for the current weather situation.\n";
         str += "EXTERNAL: The user asks something unrelated to the current conversation (e.g., general knowledge).\n";
+        str += "DOCUMENT: The user refers to or wants to summarize a document from the website.\n";
         str += "Reply with one word only.";
         return  "\"" + prompt + "\". " + str;
     }

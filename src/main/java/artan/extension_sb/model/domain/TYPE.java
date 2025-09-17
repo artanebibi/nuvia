@@ -5,11 +5,10 @@ public enum TYPE {
     INTERNAL, // something related to the ongoing conversation  --- FINISH
     EXTERNAL, // something related to general knowledge         --- FINISH
     VIDEO, // video summarization ()
-    PHOTO, // photo summarization ()
     SUMMARIZATION, // webpage summarization ()                  --- FINISH
     TIME_DATE, // current time                                  --- FINISH
     WEATHER, // weather                                         --- FINISH
     WEATHER_RESULT, // fetch weather result (tied to WEATHER)   --- FINISH
     SEARCH, // search functionality on a website
-    DOCUMENT_SUMMARIZATION
+    DOCUMENT
 }

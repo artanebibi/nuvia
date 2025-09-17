@@ -33,36 +33,42 @@ public class GeminiServiceImpl implements GeminiService {
     }
 
     @Override
-    public String generateContent(String prompt, Chat chat) throws JsonProcessingException {
+    public Log generateContent(String prompt, Chat chat) throws JsonProcessingException {
+        System.out.println("--- GeminiService: Main Method ---");
+        System.out.println("Type before first request: " + type);
         String requestBody = processingService.formatPrompt(type, prompt, chat);
+        System.out.println("Request body for first request: " + requestBody);
         String result = sendToApi(requestBody);
         Response response = processingService.handleResponse(result);
         String typeStr = response.getCandidates().get(0)
                 .getContent().getParts().get(0)
                 .getText();
         typeStr = typeStr.replace("\n", "");
+        System.out.println("Type after first request: " + typeStr);
         type = TYPE.valueOf(typeStr);
 
-        System.out.println("+++ Defined type: " + typeStr);
+//        System.out.println("+++ Defined type: " + typeStr);
 
         // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
-        if (type == TYPE.SUMMARIZATION) {
-            System.out.println("/// Middle-Returning: " + typeStr);
+        if (type == TYPE.SUMMARIZATION || type == TYPE.VIDEO || type == TYPE.DOCUMENT) {
+//            System.out.println("/// Middle-Returning: " + typeStr);
+            System.out.println("Returning in middle");
             type = TYPE.DEFINE;
             loggedPrompt = prompt;
-            return typeStr;
+            return new Log(typeStr, typeStr, null, null);
         }
 
         requestBody = processingService.formatPrompt(type, prompt, chat);
+        System.out.println("Request body for second request");
         result = sendToApi(requestBody);
         response = processingService.handleResponse(result);
 
         if (type == TYPE.WEATHER) {
             String location = response.getCandidates().get(0)
                     .getContent().getParts().get(0).getText();
-
+            System.out.println("Weather location: " + location);
             String weatherData = fetchWeather(location);
-            System.out.println("WEATHER:\n" + weatherData);
+            System.out.println("WEATHER DATA:\n" + weatherData);
 //            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, location);
 
             requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData, null);
@@ -74,87 +80,66 @@ public class GeminiServiceImpl implements GeminiService {
                 .getContent().getParts().get(0).getText(),
                 LocalDateTime.now(), type);
         logService.save(log);
+        System.out.println("Response after second request: " + log.getResponse());
+        logService.save(log);
+        type = TYPE.DEFINE;
+        return log;
+    }
 
+//    @Override
+//    public Log generateLogFromContent(String prompt, Chat chat) throws JsonProcessingException {
+//        String requestBody = processingService.formatPrompt(type, prompt, chat);
+//        String result = sendToApi(requestBody);
+//        Response response = processingService.handleResponse(result);
+//        String typeStr = response.getCandidates().get(0)
+//                .getContent().getParts().get(0)
+//                .getText();
+//        typeStr = typeStr.replace("\n", "");
+//        type = TYPE.valueOf(typeStr);
+//
+//        System.out.println("+++ Defined type: " + typeStr);
+//
+//        // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
+//        if (type == TYPE.SUMMARIZATION || type == TYPE.VIDEO || type == TYPE.DOCUMENT) {
+//            System.out.println("/// Middle-Returning: " + typeStr);
+//            type = TYPE.DEFINE;
+//            loggedPrompt = prompt;
+//            return null;
+//        }
+//
+//        requestBody = processingService.formatPrompt(type, prompt, chat);
+//        result = sendToApi(requestBody);
+//        response = processingService.handleResponse(result);
+//
+//        if (type == TYPE.WEATHER) {
+//            String location = response.getCandidates().get(0)
+//                    .getContent().getParts().get(0).getText();
+//
+//            String weatherData = fetchWeather(location);
+//            System.out.println("WEATHER:\n" + weatherData);
+//
+//            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData, chat);
+//            result = sendToApi(requestBody);
+//            response = processingService.handleResponse(result);
+//        }
+//
+//        Log log = new Log(prompt, response.getCandidates().get(0)
+//                .getContent().getParts().get(0).getText(),
+//                LocalDateTime.now(), type);
 //        logService.save(log);
-        type = TYPE.DEFINE;
-        return log.getResponse();
-    }
+//
+//        type = TYPE.DEFINE;
+//        return log;
+//    }
 
     @Override
-    public Log generateLogFromContent(String prompt, Chat chat) throws JsonProcessingException {
-        String requestBody = processingService.formatPrompt(type, prompt, chat);
-        String result = sendToApi(requestBody);
-        Response response = processingService.handleResponse(result);
-        String typeStr = response.getCandidates().get(0)
-                .getContent().getParts().get(0)
-                .getText();
-        typeStr = typeStr.replace("\n", "");
-        type = TYPE.valueOf(typeStr);
-
-        System.out.println("+++ Defined type: " + typeStr);
-
-        // EXTERNAL ENDPOINT USAGE NEEDED FOR STREAMING IN CONTENT
-        if (type == TYPE.SUMMARIZATION) {
-            System.out.println("/// Middle-Returning: " + typeStr);
-            type = TYPE.DEFINE;
-            loggedPrompt = prompt;
-            return null;
-        }
-
-        requestBody = processingService.formatPrompt(type, prompt, chat);
-        result = sendToApi(requestBody);
-        response = processingService.handleResponse(result);
-
-        if (type == TYPE.WEATHER) {
-            String location = response.getCandidates().get(0)
-                    .getContent().getParts().get(0).getText();
-
-            String weatherData = fetchWeather(location);
-            System.out.println("WEATHER:\n" + weatherData);
-
-            requestBody = processingService.formatPrompt(TYPE.WEATHER_RESULT, prompt + "###" + weatherData, chat);
-            result = sendToApi(requestBody);
-            response = processingService.handleResponse(result);
-        }
-
-        Log log = new Log(prompt, response.getCandidates().get(0)
-                .getContent().getParts().get(0).getText(),
-                LocalDateTime.now(), type);
-        logService.save(log);
-
-        type = TYPE.DEFINE;
-        return log;
-    }
-
-    @Override
-    public String generateSpecialContent(String prompt) throws JsonProcessingException {
+    public Log generateSpecialContent(String prompt) throws JsonProcessingException {
         String[] parts = prompt.split("###");
         String tmpType = parts[0];
         String tmpPrompt = parts[1];
         TYPE tmpTypeObj = TYPE.valueOf(tmpType);
         String requestBody = "";
-        if ("VIDEO".equals(tmpType)) {
-            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
-        } else if ("SUMMARIZATION".equals(tmpType)) {
-            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
-        }
-        String result = sendToApi(requestBody);
-        Response response = processingService.handleResponse(result);
-        Log log = new Log(loggedPrompt, response.getCandidates().get(0)
-                .getContent().getParts().get(0).getText(),
-                LocalDateTime.now(), tmpTypeObj);
-        logService.save(log);
-        return log.getResponse();
-    }
-
-    @Override
-    public Log generateLogFromSpecialContent(String prompt) throws JsonProcessingException {
-        String[] parts = prompt.split("###");
-        String tmpType = parts[0];
-        String tmpPrompt = parts[1];
-        TYPE tmpTypeObj = TYPE.valueOf(tmpType);
-        String requestBody = "";
-        if ("VIDEO".equals(tmpType)) {
+        if ("VIDEO".equals(tmpType) || "DOCUMENT".equals(tmpType)) {
             requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
         } else if ("SUMMARIZATION".equals(tmpType)) {
             requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
@@ -167,6 +152,27 @@ public class GeminiServiceImpl implements GeminiService {
         logService.save(log);
         return log;
     }
+
+//    @Override
+//    public Log generateLogFromSpecialContent(String prompt) throws JsonProcessingException {
+//        String[] parts = prompt.split("###");
+//        String tmpType = parts[0];
+//        String tmpPrompt = parts[1];
+//        TYPE tmpTypeObj = TYPE.valueOf(tmpType);
+//        String requestBody = "";
+//        if ("VIDEO".equals(tmpType)) {
+//            requestBody = processingService.formatPrompt(tmpTypeObj, loggedPrompt + "###" + tmpPrompt, null);
+//        } else if ("SUMMARIZATION".equals(tmpType)) {
+//            requestBody = processingService.formatPrompt(tmpTypeObj, tmpPrompt, null);
+//        }
+//        String result = sendToApi(requestBody);
+//        Response response = processingService.handleResponse(result);
+//        Log log = new Log(loggedPrompt, response.getCandidates().get(0)
+//                .getContent().getParts().get(0).getText(),
+//                LocalDateTime.now(), tmpTypeObj);
+//        logService.save(log);
+//        return log;
+//    }
 
 
     private String fetchWeather(String location) {

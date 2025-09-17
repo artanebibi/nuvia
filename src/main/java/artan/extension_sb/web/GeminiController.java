@@ -39,7 +39,8 @@ public class GeminiController {
             String userInfo = authentication != null ? authentication.getName() : "anonymous";
             System.out.println("Gemini request from: " + userInfo);
 
-            String response = geminiService.generateContent(prompt, null);
+            Log log = geminiService.generateContent(prompt, null);
+            String response = log.getResponse();
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500)
@@ -59,20 +60,23 @@ public class GeminiController {
                     return ResponseEntity.status(401).build();
                 }
 
-
+                System.out.println("--- GeminiController: Main Method ---");
                 System.out.println("Gemini request from: " + userId);
+                System.out.println("Gemini request: " + prompt);
 
                 Chat chat = chatService.GetChat(userId, id);
-                String response = geminiService.generateContent(prompt, chat);
-                Log log = geminiService.generateLogFromContent(prompt, chat);
-
-                List<Log> logs = chat.getLogs();
-                if (logs == null) {
-                    logs = new ArrayList<>();
+                Log log = geminiService.generateContent(prompt, chat);
+                String response = log.getResponse();
+//                Log log = geminiService.generateLogFromContent(prompt, chat);
+                if(log.getType() != null) {
+                    List<Log> logs = chat.getLogs();
+                    if (logs == null) {
+                        logs = new ArrayList<>();
+                    }
+                    logs.add(log);
+                    chat.setLogs(logs);
+                    chatService.AddChat(userId, chat);
                 }
-                logs.add(log);
-                chat.setLogs(logs);
-                chatService.AddChat(userId, chat);
 
                 return ResponseEntity.ok(response);
             }
@@ -91,7 +95,8 @@ public class GeminiController {
             String userInfo = authentication != null ? authentication.getName() : "anonymous";
             System.out.println("Special Gemini request from: " + userInfo);
 
-            String response = geminiService.generateSpecialContent(prompt);
+            Log log = geminiService.generateSpecialContent(prompt);
+            String response = log.getResponse();
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500)
@@ -117,9 +122,10 @@ public class GeminiController {
 
                 System.out.println("Gemini request from: " + userId);
 
-                String response = geminiService.generateSpecialContent(prompt);
+                Log log = geminiService.generateSpecialContent(prompt);
+                String response = log.getResponse();
                 Chat chat = chatService.GetChat(userId, id);
-                Log log = geminiService.generateLogFromSpecialContent(prompt);
+//                Log log = geminiService.generateLogFromSpecialContent(prompt);
 
                 List<Log> logs = chat.getLogs();
                 if (logs == null) {

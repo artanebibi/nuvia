@@ -41,6 +41,130 @@ async function getCanonicalFromTab(tabId) {
     return result || "";
 }
 
+// --- Detect common doc-like extensions
+const DOC_LIKE_RE = /\.(docx?|pptx?|xlsx?)($|[?#])/i;
+
+// Try to unwrap common viewers/wrappers to the actual file URL
+function tryExtractDocLikeFromViewer(raw) {
+    try {
+        const u = new URL(raw);
+
+        // 1) Google Docs Viewer: https://docs.google.com/gview?embedded=1&url=<encoded>
+        if (u.hostname.endsWith("docs.google.com") && u.pathname === "/gview") {
+            const src = u.searchParams.get("url");
+            if (src) return decodeURIComponent(src);
+        }
+
+        // 2) Office Online Viewer: https://view.officeapps.live.com/op/view.aspx?src=<encoded>
+        if (u.hostname.includes("officeapps.live.com")) {
+            const src = u.searchParams.get("src");
+            if (src) return decodeURIComponent(src);
+        }
+
+        // 3) Dropbox share → direct download (if desired)
+        //   www.dropbox.com/s/<id>/<name>.docx?dl=0  → dl=1
+        if (u.hostname.endsWith("dropbox.com")) {
+            if (u.searchParams.get("dl") === "0") {
+                u.searchParams.set("dl", "1");
+                return u.toString();
+            }
+        }
+
+        // 4) Google Drive preview: https://drive.google.com/file/d/<ID>/view
+        //    Convert to a direct-ish download link (works if file is public)
+        if (u.hostname === "drive.google.com" && u.pathname.startsWith("/file/d/")) {
+            const id = u.pathname.split("/")[3];
+            if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
+        }
+
+        // 5) OneDrive/SharePoint web viewer:
+        //    many links have query ?web=1; replacing with ?download=1 usually forces file download
+        if (u.hostname.includes("sharepoint.com") || u.hostname.includes("onedrive.live.com")) {
+            if (u.searchParams.has("web")) {
+                u.searchParams.delete("web");
+                u.searchParams.set("download", "1");
+                return u.toString();
+            }
+            // Some shared links use ":w:" style paths; appending ?download=1 often works:
+            if (!u.searchParams.has("download")) {
+                u.searchParams.set("download", "1");
+                return u.toString();
+            }
+        }
+
+        return raw;
+    } catch {
+        return raw;
+    }
+}
+
+// Probe the page DOM for a direct .docx/.pptx/.xlsx link (or canonical)
+async function probePageForDocLike(tabId) {
+    const [{ result } = {}] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+            const pick = (el) => el?.src || el?.href || el?.data || null;
+
+            const canonical = document.querySelector('link[rel="canonical"]')?.href || null;
+
+            // Common containers/anchors that might hold direct file URLs
+            const candidates = [
+                document.querySelector('a[href$=".docx"], a[href$=".doc"], a[href*=".docx?"], a[href*=".doc?"]'),
+                document.querySelector('a[href$=".pptx"], a[href$=".ppt"], a[href*=".pptx?"], a[href*=".ppt?"]'),
+                document.querySelector('a[href$=".xlsx"], a[href$=".xls"], a[href*=".xlsx?"], a[href*=".xls?"]'),
+                document.querySelector('iframe[src*=".docx"], iframe[src*=".doc"], iframe[src*=".pptx"], iframe[src*=".xlsx"]'),
+                document.querySelector('embed[src*=".docx"], embed[src*=".doc"], embed[src*=".pptx"], embed[src*=".xlsx"]'),
+                document.querySelector('object[data*=".docx"], object[data*=".doc"], object[data*=".pptx"], object[data*=".xlsx"]'),
+            ].filter(Boolean);
+
+            const firstDocLike = candidates.map(pick).find(Boolean) || null;
+
+            // Fallback: Open Graph URL often points to the canonical share link
+            const og = document.querySelector('meta[property="og:url"]')?.content || null;
+
+            return { canonical, firstDocLike, og, href: location.href };
+        },
+    });
+
+    return result || {};
+}
+
+// Public resolver you can call for DOCX/PPTX/XLSX (and it still works for regular URLs)
+async function resolveUrlFromExtensionUI() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return "";
+
+    // Start with address bar
+    let url = tab.url || "";
+
+    // Unwrap common viewers
+    url = tryExtractDocLikeFromViewer(url);
+
+    // Probe inside the page (requires activeTab + user gesture)
+    try {
+        const { canonical, firstDocLike, og, href } = await probePageForDocLike(tab.id);
+
+        // Prefer a direct doc-like URL if we find one in the DOM
+        if (firstDocLike && DOC_LIKE_RE.test(firstDocLike)) return firstDocLike;
+
+        // If canonical is doc-like, take it
+        if (canonical && DOC_LIKE_RE.test(canonical)) return canonical;
+
+        // OG URL sometimes cleaner than address bar
+        if (og && DOC_LIKE_RE.test(og)) return og;
+
+        // If none match doc-like, still prefer canonical/og for stability
+        if (canonical) return canonical;
+        if (og) return og;
+
+        // Fallbacks
+        return url || href || "";
+    } catch {
+        // If we can't inject/execute, fallback to unwrapped address bar
+        return url;
+    }
+}
+
 async function resolveYouTubeUrlFromExtensionUI() {
     // Called from popup/sidepanel/background (not from the page)
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -341,7 +465,7 @@ function setupOriginalChatInterface() {
 
             const text = await response.text();
 
-            if (text === 'SUMMARIZATION' || text === 'VIDEO') {
+            if (text === 'SUMMARIZATION' || text === 'VIDEO' || text === 'DOCUMENT') {
                 await generateSpecialContent(text);
             }
 
@@ -466,7 +590,34 @@ async function generateSpecialContent(type) {
             loadSpecificChat(CURRENT_CHAT_ID); // call once
         }
     }
+    else if(type === 'DOCUMENT'){
+        const documentUrl = await resolveUrlFromExtensionUI();
 
+        const payload = `${type}###${documentUrl}`;
+
+        try {
+            const authHeader = await getAuthHeader();
+            const endpoint = currentChatId
+                ? `http://localhost:8080/api/gemini/generate-special/${currentChatId}`
+                : "http://localhost:8080/api/gemini/generate-special";
+
+            const result = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain",
+                    ...(authHeader ? { "Authorization": authHeader } : {})
+                },
+                body: payload
+            });
+
+            const responseText = await result.text();
+            console.log("Gemini response:", responseText);
+        } catch (error) {
+            console.error("Error in generateSpecialContent:", error);
+        } finally {
+            loadSpecificChat(CURRENT_CHAT_ID); // call once
+        }
+    }
 }
 
 async function extractPageData() {
